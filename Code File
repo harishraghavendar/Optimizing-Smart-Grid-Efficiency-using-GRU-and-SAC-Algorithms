@@ -1,0 +1,81 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.express as px
+from datetime import datetime, timedelta
+
+# Custom Styles
+st.markdown("""
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .main {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .st-df {
+            border-radius: 10px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# Generate synthetic dataset
+def generate_data():
+    date_rng = pd.date_range(start='2025-01-01', end='2025-01-31', freq='H')
+    data = []
+    for date in date_rng:
+        hour = date.hour
+        temp = np.random.uniform(10, 35)
+        is_weekend = 1 if date.weekday() in [5, 6] else 0
+        is_holiday = 1 if date.day in [1, 26] else 0
+        energy_consumption = np.random.uniform(0.5, 5.0) * (1.2 if is_weekend else 1.0)
+        device_type = np.random.choice(['AC', 'Heater', 'Lights', 'Fan', 'Refrigerator'])
+        
+        data.append([date, hour, temp, is_weekend, is_holiday, energy_consumption, device_type])
+    
+    return pd.DataFrame(data, columns=['Date', 'Hour', 'Temperature', 'Is_Weekend', 'Is_Holiday', 'Energy_Consumption', 'Device_Type'])
+
+df = generate_data()
+
+# Sidebar for filtering
+st.sidebar.title("Filters")
+date_range = st.sidebar.date_input("Select Date Range", [df['Date'].min(), df['Date'].max()])
+time_range = st.sidebar.slider("Select Hour Range", 0, 23, (0, 23))
+device_type = st.sidebar.selectbox("Select Device Type", df['Device_Type'].unique())
+
+# Filter data
+filtered_df = df[(df['Date'] >= pd.to_datetime(date_range[0])) & (df['Date'] <= pd.to_datetime(date_range[1]))]
+filtered_df = filtered_df[(filtered_df['Hour'] >= time_range[0]) & (filtered_df['Hour'] <= time_range[1])]
+filtered_df = filtered_df[filtered_df['Device_Type'] == device_type]
+
+# Main Content
+st.markdown("<div class='main'>", unsafe_allow_html=True)
+st.title("⚡ SPARKS Energy Conservation Dashboard")
+
+# Show filtered data
+st.subheader("📊 Filtered Data")
+st.dataframe(filtered_df.head(10))
+
+# Plot energy consumption
+def plot_energy_consumption(df):
+    fig = px.line(df, x='Date', y='Energy_Consumption', title='📈 Energy Consumption Over Time', labels={'Energy_Consumption': 'kWh'}, template='plotly_dark')
+    st.plotly_chart(fig)
+
+st.subheader("📉 Energy Consumption Trend")
+plot_energy_consumption(filtered_df)
+
+# Energy-saving recommendations
+st.subheader("💡 Energy-Saving Tips")
+st.markdown("""
+    - 🔌 **Use energy-efficient appliances.**
+    - 🚦 **Turn off devices when not in use.**
+    - 🌡️ **Adjust thermostat settings based on time of day.**
+    - 💡 **Optimize lighting usage by switching to LEDs.**
+    - 📅 **Monitor and schedule high-energy-consuming devices efficiently.**
+""")
+
+st.markdown("</div>", unsafe_allow_html=True)
